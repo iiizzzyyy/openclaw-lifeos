@@ -1,0 +1,31 @@
+# HEARTBEAT.md — Routing Table (keep under 20 lines of checks)
+# Heartbeats are for SENSING. Heavy work belongs in CRON JOBS.
+
+## Layer 1: Read heartbeat-index.json FIRST (~45 tokens)
+- Run `python3 ~/clawd/scripts/build_heartbeat_index.py` → read `hive/heartbeat-index.json`
+- If health=🟢 OK → HEARTBEAT_OK (done, no further reads needed)
+- If health=🔴 NEEDS_ATTENTION → escalate to Layer 2
+
+## Layer 2: Only if flagged (read knowledge-index.json ~500 tokens)
+- Read `hive/knowledge-index.json` for context on what's wrong
+- **OpenClaw tasks:** `openclaw tasks audit --json` — alert if `findings` + `errors` + `warnings` > 0
+- **Circuit breakers open:** Run `python3 ~/clawd/scripts/circuit_breaker.py status` — alert user
+- **Stalled tasks:** Glance at `tasks/active.json` — alert if checkinsWithoutProgress >= 3 on active (not waiting) tasks
+- **CONTEXT.md stale:** Refresh it
+- **Worker errors:** Check `hive/state.json` for details
+- **Self-heal:** Pipe cron list JSON to `python3 ~/clawd/scripts/self_heal.py` — auto-rerun stale jobs
+
+## Layer 3: Full file reads — only for active investigation
+- Only load CONTEXT.md, MEMORY.md, or daily files if Layers 1-2 flag a specific issue
+
+## Rules
+- Late night (23:00-08:00): HEARTBEAT_OK unless urgent
+- If Layer 1 says 🟢 OK: HEARTBEAT_OK immediately (don't read anything else)
+- Heavy periodic work runs via CRON, not here
+
+---
+
+**Customize this for your needs:**
+- Add checks for your business metrics
+- Monitor your specific cron jobs
+- Alert on your definition of "urgent"

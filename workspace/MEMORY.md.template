@@ -1,0 +1,52 @@
+# MEMORY.md — Long-Term Memory
+**Created:** [Date] (bootstrapped from daily memory files)
+
+---
+
+## 👤 About [User Name]
+
+- [preference] [Key preference 1]
+- [preference] [Key preference 2]
+- [event] [Significant event]
+- [preference] [Communication style]
+- [preference] [Email, timezone, etc.]
+
+---
+
+## 🏗️ [Project/Business Name]
+
+- [preference] [Domain, ICP, value props]
+- [preference] [Strategy, frameworks]
+- [event] [Milestones, launches]
+- [tool] [Analytics, tools in use]
+
+---
+
+## 🔧 Infrastructure
+
+- [decision] [Key infrastructure decisions]
+- [tool] [Workflow tools, scripts]
+- [lesson] [Lessons learned from failures]
+
+---
+
+## 🧠 Lessons Learned
+
+- [lesson] [Lesson 1]
+- [lesson] [Lesson 2]
+- [lesson] [Lesson 3]
+
+---
+
+## 📅 Key Dates
+
+- [event] [Date] — [Event]
+- [event] [Date] — [Event]
+
+---
+
+**Instructions:**
+- This file is curated long-term memory (main sessions only)
+- Daily memory goes in `memory/YYYY-MM-DD.md`
+- Use expiry tags: `[decision]` 180d, `[event]` 90d, `[lesson]` never expires
+- Run `python3 ~/clawd/scripts/memory_summarizer.py --gc` weekly to clean up

@@ -1,0 +1,61 @@
+# Logs
+logs/
+*.log
+
+# Runtime data
+*.jsonl
+*.pyc
+__pycache__/
+.venv/
+venv/
+
+# Secrets
+.env
+*.key
+*.pem
+config.env
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Build outputs
+dist/
+build/
+*.egg-info/
+
+# Memory files (these are personal)
+memory/
+MEMORY.md
+CONTEXT.md
+CONTINUATION.md
+
+# Skill-generated data (keep SKILL.md, skip outputs)
+skills/*/data/wiki/
+skills/*/data/reports/
+skills/*/output/
+skills/*/dist/
+
+# Workspace files (generated per user)
+workspace/*.md
+
+# Logs and traces
+logs/
+traces/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Temporary files
+tmp/
+temp/
+/tmp/

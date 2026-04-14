@@ -1,0 +1,109 @@
+{
+  "jobs": [
+    {
+      "id": "morning_briefing",
+      "name": "Morning Briefing",
+      "schedule": "0 6 * * *",
+      "timezone": "Europe/Berlin",
+      "workflow": "daily-briefing",
+      "description": "Daily morning brief: calendar, emails, priority tasks",
+      "delivery": {
+        "to": "telegram:YOUR_TELEGRAM_ID",
+        "format": "markdown"
+      },
+      "enabled": true
+    },
+    {
+      "id": "blog_promotion_1",
+      "name": "Blog Promotion (Morning)",
+      "schedule": "0 9 * * *",
+      "timezone": "Europe/Berlin",
+      "workflow": "blog-promo",
+      "description": "Promote blog posts across platforms",
+      "delivery": {
+        "to": "telegram:YOUR_TELEGRAM_ID",
+        "format": "markdown"
+      },
+      "enabled": true,
+      "gate": {
+        "type": "daily",
+        "max_runs": 6
+      }
+    },
+    {
+      "id": "blog_promotion_2",
+      "name": "Blog Promotion (Midday)",
+      "schedule": "0 12 * * *",
+      "timezone": "Europe/Berlin",
+      "workflow": "blog-promo",
+      "description": "Promote blog posts across platforms",
+      "delivery": {
+        "to": "telegram:YOUR_TELEGRAM_ID",
+        "format": "markdown"
+      },
+      "enabled": true,
+      "gate": {
+        "type": "daily",
+        "max_runs": 6
+      }
+    },
+    {
+      "id": "lead_research",
+      "name": "Lead Research",
+      "schedule": "0 10 * * *",
+      "timezone": "Europe/Berlin",
+      "workflow": "lead-research",
+      "description": "Deep research on potential customers",
+      "delivery": {
+        "to": "telegram:YOUR_TELEGRAM_ID",
+        "format": "markdown"
+      },
+      "enabled": true,
+      "gate": {
+        "type": "daily",
+        "max_runs": 1
+      }
+    },
+    {
+      "id": "health_report",
+      "name": "Weekly Health Report",
+      "schedule": "0 8 * * 1",
+      "timezone": "Europe/Berlin",
+      "workflow": "health-report",
+      "description": "Weekly system status, failures, cost breakdown",
+      "delivery": {
+        "to": "telegram:YOUR_TELEGRAM_ID",
+        "format": "markdown"
+      },
+      "enabled": true,
+      "gate": {
+        "type": "weekly",
+        "max_runs": 1
+      }
+    },
+    {
+      "id": "overnight_build",
+      "name": "Overnight Build",
+      "schedule": "0 2 * * *",
+      "timezone": "UTC",
+      "workflow": "overnight-build",
+      "description": "Pick and build highest-value task overnight",
+      "delivery": {
+        "to": "telegram:YOUR_TELEGRAM_ID",
+        "format": "markdown"
+      },
+      "enabled": true,
+      "gate": {
+        "type": "daily",
+        "max_runs": 1
+      }
+    }
+  ],
+  "_notes": {
+    "schedule_format": "Cron format: minute hour day month weekday",
+    "timezone": "Use IANA timezone names (e.g., Europe/Berlin, America/New_York)",
+    "delivery": "Format: channel:ID (e.g., telegram:5065264208, email:user@example.com)",
+    "gates": "Prevent over-execution: daily/weekly limits",
+    "customize": "Replace YOUR_TELEGRAM_ID with your actual ID, adjust times to your timezone"
+  }
+}

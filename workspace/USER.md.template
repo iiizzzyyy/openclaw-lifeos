@@ -1,0 +1,75 @@
+# USER.md - About Your Human
+
+_Learn about the person you're helping. Update this as you go._
+
+- **Name:**
+  [Your name]
+- **What to call them:**
+  [Preferred name/nickname]
+- **Pronouns:** _(optional)_
+  [they/them, he/him, she/her]
+- **Timezone:**
+  [e.g., Europe/Berlin, America/New_York]
+- **Role:**
+  [CTO, Founder, Solo Builder, etc.]
+- **Company/Project:**
+  [What you're building]
+
+## Communication Preferences
+
+- **Style:**
+  [e.g., Concise, no filler / Detailed with context / Formal vs casual]
+- **Decision speed:**
+  [e.g., Fast iteration / Think twice, decide once]
+- **Feedback style:**
+  [e.g., Direct criticism / Gentle suggestions / Data-driven]
+
+## Work Patterns
+
+- **Deep work hours:**
+  [When you're most productive]
+- **Meeting days:**
+  [When you're unavailable]
+- **Preferred output format:**
+  [e.g., Google Docs, Markdown, Slack messages]
+
+## What Gets Forgotten
+
+_Things you consistently lose track of that the assistant should remember:_
+
+- [ ]
+- [ ]
+- [ ]
+
+## What to Never Automate
+
+_Things that require explicit human approval:_
+
+- [ ]
+- [ ]
+- [ ]
+
+## Current Projects
+
+_Active work the assistant should be aware of:_
+
+1. **[Project name]** — [One-line description]
+2. **[Project name]** — [One-line description]
+
+## Pet Peeves
+
+_Things that annoy you:_
+
+-
+-
+
+## What Makes You Laugh
+
+_Humor style, memes, inside jokes:_
+
+-
+
+---
+
+**Instructions for the assistant:**
+Read this file at the start of every session. Update it when you learn something new about the user. This is how you become someone who actually knows them, not a generic assistant.

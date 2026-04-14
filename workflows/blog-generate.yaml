@@ -1,0 +1,151 @@
+name: blog-generate
+description: Generate a new PromptMetrics blog post using Big 5 framework
+gate: blog_generate
+
+# Run with: python3 scripts/run_workflow.py blog-generate --param type=problems --param research=/tmp/research.md
+
+steps:
+  - name: validate_params
+    type: script
+    description: Check required parameters
+    command: >-
+      TYPE="{{type}}" &&
+      if [ -z "$TYPE" ]; then
+        echo '{"error": "Missing --param type=<pricing|problems|comparison|best|reviews>"}'
+        exit 1
+      fi &&
+      echo "{\"type\": \"$TYPE\", \"valid\": true}"
+    output: params
+    timeout: 5
+
+  - name: load_templates
+    type: script
+    description: Load base template and style guide
+    command: >-
+      TYPE="{{type}}" &&
+      BASE=$(cat /Users/izzy/clawd/skills/promptmetrics-blog/templates/base.md) &&
+      STYLE=$(cat /Users/izzy/clawd/skills/promptmetrics-blog/templates/style/${TYPE}.md 2>/dev/null || echo "Style not found") &&
+      echo "{\"loaded\": true, \"type\": \"$TYPE\"}"
+    timeout: 10
+
+  - name: gemini_research
+    type: script
+    description: Use Gemini to gather sources and citations for blog content
+    command: >-
+      TYPE="{{type}}" &&
+      gemini "Research topics relevant to a '${TYPE}' style blog post about
+      LLM observability, cost tracking, and AI governance for startups.
+      Find recent statistics, industry reports, expert quotes, real-world
+      case studies, and competing viewpoints. Include source names where
+      possible. Focus on content a CTO or AI engineering leader would find
+      credible and compelling. Be thorough, use bullet points with sources."
+      2>/dev/null | tee /tmp/blog_gemini_research.txt &&
+      echo '{"researched": true}' || echo '{"researched": false}'
+    output: gemini_blog_research
+    timeout: 120
+    continue_on_error: true
+
+  - name: generate_post
+    type: agent
+    description: Generate the blog post
+    prompt_file: /Users/izzy/clawd/config/prompts/main/wf-blog-generate-generate-post.md
+    system_prompt_file: /Users/izzy/clawd/config/prompts/main/system.md
+    output: blog_content
+    writes_file: /tmp/blog_content_generated.txt
+    timeout: 180
+    #   Generate a PromptMetrics blog post using the Big 5 "{{type}}" framework.
+    #   
+    #   **Step 1: Load templates**
+    #   Read these files:
+    #   - Base: /Users/izzy/clawd/skills/promptmetrics-blog/templates/base.md
+    #   - Style: /Users/izzy/clawd/skills/promptmetrics-blog/templates/style/{{type}}.md
+    #   - Example: Find matching example in /Users/izzy/clawd/skills/promptmetrics-blog/templates/examples/
+    #   
+    #   **Step 2: Load research context (if provided)**
+    #   Research file: {{research}}
+    #   Gemini research: Read /tmp/blog_gemini_research.txt for recent stats, sources, and citations to reference.
+    #   If file exists, read it. Otherwise, use your knowledge of PromptMetrics:
+    #   - LLM observability platform
+    #   - Cost tracking and optimization
+    #   - EU AI Act compliance
+    #   - Prompt versioning and debugging
+    #   
+    #   **Step 3: Generate blog post**
+    #   Follow the assembled mega-prompt to write the full blog post.
+    #   Target: CTOs and AI engineering leaders at early-stage startups.
+    #   
+    #   **Step 4: Save to file**
+    #   Save the complete blog post to /tmp/blog_generated_$(date +%Y-%m-%d).md
+    #   
+    #   **Step 5: Generate image prompt**
+    #   Use nano-banana skill workflow:
+    #   1. Extract themes from blog
+    #   2. Search library: `grep -i "<keyword>" /Users/izzy/clawd/skills/nano-banana-pro-prompts-recommend-skill/references/*.json`
+    #   3. Remix match or generate custom prompt
+    #   4. Append image prompt to the markdown file
+
+  - name: write_blog_file
+    type: script
+    description: Save blog content to final file
+    command: "cp /tmp/blog_content_generated.txt /tmp/blog_generated_$(date +%Y-%m-%d).md && echo '{\"written\": true}'"
+    output: write_result
+    timeout: 10
+
+  - name: generate_image_prompt
+    type: agent
+    description: Generate image prompt for blog
+    prompt_file: /Users/izzy/clawd/config/prompts/main/wf-blog-generate-image-prompt.md
+    system_prompt_file: /Users/izzy/clawd/config/prompts/main/system.md
+    output: image_prompt
+    timeout: 60
+    continue_on_error: true
+
+  - name: append_image_prompt
+    type: script
+    description: Append image prompt to blog file
+    command: >-
+      DATE=$(date +%Y-%m-%d) &&
+      echo "" >> /tmp/blog_generated_${DATE}.md &&
+      echo "---" >> /tmp/blog_generated_${DATE}.md &&
+      echo "## Image Prompt" >> /tmp/blog_generated_${DATE}.md &&
+      echo "{{image_prompt}}" >> /tmp/blog_generated_${DATE}.md &&
+      echo '{"appended": true}'
+    timeout: 10
+    continue_on_error: true
+
+  - name: create_doc
+    type: script
+    description: Create Google Doc
+    command: >-
+      cd /Users/izzy/clawd &&
+      source ~/.venvs/chatterbox/bin/activate &&
+      DATE=$(date +%Y-%m-%d) &&
+      TITLE=$(head -1 /tmp/blog_generated_${DATE}.md | sed 's/^# //') &&
+      python3 scripts/gdoc_upload.py "$TITLE" /tmp/blog_generated_${DATE}.md 2>&1 |
+      python3 -c "import sys,json; print(json.load(sys.stdin)['id'])" || echo "doc_failed"
+    output: doc_id
+    timeout: 60
+
+  - name: share_doc
+    type: script
+    description: Share with Izzy (skip if already owned by tuiizzyy)
+    command: >-
+      echo '{"shared": true, "note": "Doc owned by tuiizzyy@gmail.com - no share needed"}'
+    timeout: 30
+    continue_on_error: true
+
+  - name: notify
+    type: agent
+    description: Send to Telegram
+    prompt_file: /Users/izzy/clawd/config/prompts/main/wf-blog-generate-notify.md
+    system_prompt_file: /Users/izzy/clawd/config/prompts/main/system.md
+    # prompt: |
+    #   Send blog post summary to Telegram (5065264208):
+    #   
+    #   📝 **New Blog Post Generated**
+    #   
+    #   - Type: {{type}}
+    #   - Title: (from /tmp/blog_generated_*.md first line)
+    #   - Doc: https://docs.google.com/document/d/{{doc_id}}/edit
+    #   
+    #   Include the image prompt at the end.

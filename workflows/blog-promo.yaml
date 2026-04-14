@@ -1,0 +1,144 @@
+name: blog-promo
+description: Promote a PromptMetrics blog post to X and LinkedIn
+gate: blog_promo
+
+steps:
+  - name: sync_sitemap
+    type: script
+    description: Sync blog posts from sitemap
+    command: >-
+      cd /Users/izzy/clawd && 
+      source ~/.venvs/chatterbox/bin/activate && 
+      python3 scripts/sync_blog_sitemap.py 2>&1 || echo '{"synced": false}'
+    timeout: 30
+    continue_on_error: true
+
+  - name: select_blog
+    type: script
+    description: Select next unpromoted blog (14-day window)
+    command: "sqlite3 -json /Users/izzy/clawd/data/finances.db \"SELECT slug, title, url FROM blog_posts WHERE slug NOT IN (SELECT slug FROM blog_promotions WHERE promoted_at > datetime('now', '-14 days')) ORDER BY published_date DESC LIMIT 1\" | python3 -c \"import sys,json; d=json.load(sys.stdin); print(json.dumps(d[0]) if d else '{}')\""
+    output: blog
+    timeout: 10
+
+  - name: reserve_blog
+    type: script
+    description: Reserve blog in promotions table
+    command: >-
+      WEEK=$(date +%G-W%V) &&
+      sqlite3 /Users/izzy/clawd/data/finances.db 
+      "INSERT INTO blog_promotions (slug, title, week) VALUES ('{{blog.slug}}', '{{blog.title}}', '$WEEK')"
+      && echo '{"reserved": true}'
+    timeout: 10
+
+  - name: scrape_content
+    type: script
+    description: Scrape full blog content with Playwright
+    command: >-
+      source ~/.venvs/crawl4ai/bin/activate &&
+      python3 /Users/izzy/clawd/scripts/scrape_blog.py "{{blog.url}}" /tmp/blog_content.txt &&
+      echo '{"scraped": true, "path": "/tmp/blog_content.txt"}'
+    timeout: 120
+
+  - name: get_previous
+    type: script
+    description: Get previous promotion angles to avoid duplicates
+    command: >-
+      sqlite3 /Users/izzy/clawd/data/finances.db 
+      "SELECT tweet_angle, linkedin_framework FROM blog_promotions 
+       WHERE slug='{{blog.slug}}' ORDER BY promoted_at DESC LIMIT 5"
+    output: previous
+    timeout: 10
+    continue_on_error: true
+
+  - name: extract_keywords
+    type: script
+    description: Extract blog title for prompt generation
+    command: "echo '{{blog.title}}'"
+    output: blog_title
+    timeout: 5
+
+  - name: generate_image_prompt
+    type: script
+    description: Generate custom image prompt from blog content using LLM storyboard approach
+    command: >-
+      python3 /Users/izzy/clawd/scripts/generate_blog_image_prompt.py
+      --url "{{blog.url}}"
+      --slug "{{blog.slug}}"
+      --title "{{blog.title}}"
+      --style cartoon_casual
+    output: image_prompt_data
+    timeout: 120
+    continue_on_error: true
+
+  - name: load_daily_intel
+    type: script
+    description: Load relevant trends and stats from daily intel cache (replaces Gemini research)
+    command: >-
+      if [ -f /Users/izzy/clawd/intel/DAILY-INTEL.md ]; then
+        grep -iE '(trend|stat|data|report|study|survey|growth|adoption|market)' /Users/izzy/clawd/intel/DAILY-INTEL.md | head -30 > /tmp/blog_promo_intel.txt &&
+        echo '{"loaded": true, "source": "DAILY-INTEL.md"}' ||
+        echo '{"loaded": false, "reason": "no matching content"}';
+      else
+        echo '{"loaded": false, "reason": "intel file not found"}';
+      fi
+    output: intel_result
+    timeout: 10
+    continue_on_error: true
+
+  - name: generate_promo
+    type: agent
+    description: Generate promotional content with nano-banana image prompt
+    prompt_file: /Users/izzy/clawd/config/prompts/main/wf-blog-promo-generate-promo.md
+    system_prompt_file: /Users/izzy/clawd/config/prompts/main/system.md
+    # prompt: |
+    #   Generate promotional content for this blog post.
+    #   [... see config/prompts/main/wf-blog-promo-generate-promo.md for full prompt ...]
+
+  - name: save_image_prompt
+    type: script
+    description: Save generated image prompt for manual use
+    command: >-
+      if [ -f /tmp/blog_image_prompt.json ]; then
+        cat /tmp/blog_image_prompt.json | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('image_prompt',''))" > /tmp/blog_promo_imagen_prompt.txt &&
+        echo '{"saved": true, "prompt_file": "/tmp/blog_promo_imagen_prompt.txt", "method": "storyboard-generation"}';
+      else
+        echo '{"saved": false, "reason": "no prompt generated"}';
+      fi
+    output: imagen_result
+    timeout: 5
+    continue_on_error: true
+
+  - name: send_to_telegram
+    type: agent
+    description: Send generated image and Google Doc link to Telegram
+    prompt_file: /Users/izzy/clawd/config/prompts/main/wf-blog-promo-send-to-telegram.md
+    system_prompt_file: /Users/izzy/clawd/config/prompts/main/system.md
+    # prompt: |
+    #   Send the blog promo results to Telegram:
+    #   
+    #   1. Read /tmp/blog_promo_gdoc_link.txt for the Google Doc link
+    #   2. Check if /tmp/blog_promo_image.png exists (imagen may have failed)
+    #   3. Send to Telegram:
+    #      - If image exists: send the image with caption containing the Google Doc link
+    #      - If no image: just send the Google Doc link
+    #      - Include a brief note about the nano-banana prompt source
+    #   4. Mention that posts are ready for review before publishing
+
+  - name: save_learnings
+    description: Save promotion patterns to writer memory
+    command: >-
+      echo "## Blog promo patterns {{date}}" >> /Users/izzy/clawd/hive/memory/private/writer/promo-patterns.md &&
+      echo "Patterns saved"
+    timeout: 5
+    continue_on_error: true
+
+  - name: mark_promoted
+    type: script
+    description: Mark blog as promoted with timestamp
+    command: >-
+      sqlite3 /Users/izzy/clawd/data/finances.db 
+      "UPDATE blog_promotions SET promoted_at = datetime('now') 
+       WHERE slug='{{blog.slug}}'"
+      && echo '{"marked": true}'
+    timeout: 10
+    continue_on_error: true
